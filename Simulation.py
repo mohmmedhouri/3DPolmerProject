@@ -12,12 +12,17 @@ import sys
 import time
 from os import path
 
-
-from geomcalc import *
+import constants as const
+import geomcalc
+import Energycalc
 from Elements import Polymer, Monomer
-from MC import *
 
-NumOfPoly=200
+#from MC import *
+
+#NumOfPoly=200
+
+PMMA = [Polymer(1) for i in range (0,const.n)]
+
 
 class Polypool :
     
@@ -28,11 +33,40 @@ class Polypool :
         
         if (path.exists(Inputfile)):
             print("reading dataFile")
+            self.PMMA = [Polymer(1) for i in range (0,const.n)]
+
+            len(self.PMMA)
+            f=open(Inputfile, "r")
+                
+            f1=f.readlines()
+
+            for i in range (9,len(f1)):
+                
+                Data=f1[i].split(" ")
+                #print(Data[3])
+                MonomerTemp = Monomer(float(Data[3]),float(Data[4]),float(Data[5]),float(Data[0]))
+                self.PMMA[int (Data[1])-1].Chain.append(MonomerTemp)
+                
+               
+                
+                
+            f.close()
+            for i in range (0, len(PMMA)):
+                self.PMMA[i].Chain.pop(0)
+                print()
+                self.PMMA[i].LinkBinding()
+            
+            
         else:
             
-             for i in range (0,NumOfPoly):
+            print("No DataFile was found or the file is unreadable")
+            
+            for i in range (0,const.N):
                
-               self.PMMA.append(Polymer(200))
+               self.PMMA.append(Polymer(const.n))
+            
+         
+
                
     def CalEnrMonv(self,PI,MI,dP):
         """Calculate the energy of the selected monomer after each diplecment.
@@ -48,38 +82,49 @@ class Polypool :
         Enb=0
         Ewa=0
         
-        if (BOND):
+        if (const.BOND):
             PointA =np.add( self.PMMA[PI].Chain[MI].Coordinate,dP)
             for i in (self.PMMA[PI].Chain[MI].Bond):
                 PointB = self.PMMA[PI].Chain[i].Coordinate
-                r_ij = GetRij(PointB,PointA)
+                r_ij = geomcalc.GetRij(PointB,PointA)
+                
+                if (r_ij >const.BONDTHRESHOLD*1.5 ):
+                    return math.inf
                  
-                Ebo+=GetEBond(r_ij, r_eq, k_b)
+                Ebo+=Energycalc.GetEBond(r_ij, const.r_eq, const.k_b)
         
-        if (BEND and  (MI > 0 or  MI < len(self.PMMA[PI].Chain)-1)):#
+        
+        if (const.BEND and  (MI > 0 and  MI < len(self.PMMA[PI].Chain)-1)):#
             PointA = np.add( self.PMMA[PI].Chain[MI].Coordinate,dP)
             PointB = self.PMMA[PI].Chain[MI-1].Coordinate
             PointC = self.PMMA[PI].Chain[MI+1].Coordinate
-            a_ijk = GetAijk (PointA,PointB,PointC)
-            Ebe = GetEAngle(a_ijk, a_eq, k_a)
+            a_ijk =geomcalc.GetAijk (PointA,PointB,PointC)
+            Ebe = Energycalc.GetEAngle(a_ijk,const.a_eq,const.k_a)
             
-            #print("")
             
-        if (Torsion):
-            Points=np.add( self.PMMA[PI].Chain[MI].Coordinate,dP)
+           
+        if (const.Torsion):
+            Points = []
+            PointsA=np.add( self.PMMA[PI].Chain[MI].Coordinate,dP)
+            Points.append(PointsA)
+            #print ("Indicies", PI, self.PMMA[PI].Chain[MI].Tors)
+            #print (len(self.PMMA[PI].Chain), PI, MI)
             for i in (self.PMMA[PI].Chain[MI].Tors):
+               
+                #print("Coordinate ", self.PMMA[PI].Chain[i].Coordinate)
                 Points.append(self.PMMA[PI].Chain[i].Coordinate)
-            t_ijkl=GetTijkl(Points[0],Points[1],Points[2],Points[3])
+            t_ijkl=geomcalc.GetTijkl(Points[0],Points[1],Points[2],Points[3])
             
-            Eto=GetETorsion(t_ijkl, v_n, gamma, nfold, paths)
+            Eto=Energycalc.GetETorsion(t_ijkl, const.v_n,const.gamma, const.nfold, const.paths)
             
         PointA =np.add( self.PMMA[PI].Chain[MI].Coordinate,dP)    
         for i in (self.PMMA[PI].Chain[MI].Neighbor):
-            PointB =  PMMA[i[0]].Chain[i[1]].Coordinate
-            r_ij = GetRij(PointB,PointA)
-            Enb+=GetE_LJ(r_ij, eps_ij, ro_ij)
+
+            PointB =  self.PMMA[i[0]].Chain[i[1]].Coordinate #  check neighbors format 
+            r_ij =geomcalc. GetRij(PointB,PointA)
+            Enb+=Energycalc.GetE_LJ(r_ij, const.eps_ij,const.ro_ij)
             
-        Ewa=WallEnergy(SimDimention,'cube',Coordinates,Pres,Temp,k_box)    
+        Ewa=Energycalc.WallEnergy(const.SimDimention,'cube',self.PMMA[PI].Chain[MI].Coordinate,const.Pres,const.Temp,const.k_box)    
             
             
         return Ebo+Ebe+Eto+Enb+Ewa    
@@ -91,7 +136,8 @@ class Polypool :
         """Calculate the neighboors of all monomers if the are located in a distance smaller than rc.
         
          Args:
-             Rc (float*): the cutof raduis of LJ """
+             Rc (float*): the cutof raduis of LJ """     
+        print("Updating Neighbors")
         for i in range (0,len(self.PMMA)):
             
             for j in range (0,len(self.PMMA[i].Chain)):
@@ -100,11 +146,14 @@ class Polypool :
                     
                     for k in range (0,len(self.PMMA[i].Chain)):
                     
-                        
-                       Dist2 = GetR2ij (self.PMMA[i].Chain[j].Coordinate,self.PMMA[c].Chain[k].Coordinate)
-                       
-                       if (Dist2<rc**2 or  not Dist2 == 0):
+                       if (i == c and j == k):
+                           continue
+                       else:
                            
-                           self.PMMA[i].Chain[j].Neighbor.append([c,k,Dist2**0.5])
+                           Dist2 =geomcalc.GetR2ij (self.PMMA[i].Chain[j].Coordinate,self.PMMA[c].Chain[k].Coordinate)
+                           
+                           if (Dist2<Rc**2 or  not Dist2 == 0):
+                               
+                               self.PMMA[i].Chain[j].Neighbor.append([c,k,Dist2**0.5])
                            
                            

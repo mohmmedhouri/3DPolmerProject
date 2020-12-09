@@ -11,7 +11,7 @@ Includes unit conversions, unit vectors, dot products, cross products, bond
 distances, bond angles, torsion angles, outofplane angles, and system volume.
 """
 
-import numpy
+import numpy 
 import math
 #import constants as const
 #from SimConstant import *
@@ -65,8 +65,8 @@ def GetUij(coords_i, coords_j, r_ij=None):
   if not r_ij:
     r_ij = GetRij(coords_i, coords_j)
   if not r_ij:
-    return numpy.zeros(3)
-  return (coords_j - coords_i) / r_ij
+    return numpy.zeros(3)  
+  return (numpy.subtract(coords_j , coords_i)) / r_ij
 
 
 def GetUdp(uvec_i, uvec_j):

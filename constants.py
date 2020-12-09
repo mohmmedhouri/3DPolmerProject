@@ -14,47 +14,65 @@ plotting (listed in alphabetical order).
 
 import math
 
+### 
+
+N = 200 # Chain length
+n = 20 # Number of polymer chains 
+
 ##All the constants in the simulation program
 
 ### LJ potential
-eps_ij
+BOND = True
+BEND = True
+Torsion = True
 
-ro_ij
+eps_ij = 1
+
+ro_ij = 1
 
 ### Torsion
-v_n
+v_n = 1
 
-gamma
+gamma = 1
 
-nfold
+nfold = 1
 
-paths
+paths = 1
 
 ##Bend
-a_eq
+a_eq = 1
 
-k_a
+k_a = 1
 
 ## Bond
-r_eq
+r_eq = 1
 
-k_b
+k_b = 1
 
 ## Simulation L
 
-SimDimention = 3
+SimDimention = [30,30,30]
 
 NUMDIM = 3
 
-Coordinates
+Coordinates = 50
 
 Pres = 1 
 
-Temp = 500
+Temp = 500 # start temperature
 
-k_box = 500 #
+TempE = 200 #end temperature
 
-TC = 200 ## K/msec
+k_box = 500 
+
+
+TS = 300  ## steps in ns
+
+CR = (TempE)/TS
+
+NeighborUp = 1000 # Neighbors list update
+
+PrintingT = 1000 #
 
 KB = 0.001987204
 
@@ -81,20 +99,29 @@ RAD2DEG = 180.0 / math.pi
 
 # Default optimization criteria keyword dictionary.
 # [delta_e, grad_rms, grad_max, disp_rms, disp_max]
+
 OPTCRITERIAREFS = {
     'loose':     [1.0E-4,  1.0E-3, 2.0E-3, 1.0E-2, 2.0E-2],
     'default':   [1.0E-6,  1.0E-4, 2.0E-4, 1.0E-3, 2.0E-3],
     'tight':     [1.0E-8,  1.0E-5, 2.0E-5, 1.0E-4, 2.0E-4],
     'verytight': [1.0E-10, 1.0E-6, 2.0E-6, 1.0E-5, 2.0E-5]}
 
+
+
 # Factor by which to adjust the initial line search step size between steps.
 OPTSTEPADJUSTOR = math.sqrt(2)
+
+
 
 # Fraction of image width which is covered by the plot field.
 PERCENTIMAGEPLOT = 0.75
 
+
+
 # Unit conversion between points and inches
 POINTSPERINCH = 72
+
+
 
 # Legend labels, line colors, and plotting priority for properties.
 # [energy_term, print_priority, line_color, index]

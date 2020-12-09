@@ -6,16 +6,15 @@ Created on Tue Nov  3 01:09:25 2020
 """
 
 
-from geomcalc import *
 #from SimConstant import *
 #import constants as const 
 
 
 import itertools
 import math
+import constants as const
+import geomcalc
 
-#from mmlib import constants as const
-#from mmlib import geomcalc
 
 def GetEBond(r_ij, r_eq, k_b):
   """Calculate bond stretch energy between 2 bonded atoms.
@@ -183,8 +182,10 @@ def WallEnergy(Dimention,boundtype,Coordinates,Pres,Temp,k_box):
   e_bound_i = 0.0
   if (boundtype == 'cube'):
     for j in range(0,len(Dimention)):
+        if (Coordinates[j] >  Dimention[j] or  Coordinates[j] < 0):
+            return math.inf
       
-      e_bound_i +=( (Pres * k_box * (abs(Coordinates[j]/2 - Dimention[j])))**2)/Temp
+        e_bound_i +=( (Pres * k_box * (abs(Coordinates[j] - Dimention[j]/2)))**2)/Temp
   
   return e_bound_i
     

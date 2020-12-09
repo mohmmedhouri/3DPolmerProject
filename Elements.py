@@ -151,7 +151,7 @@ class Polymer:
                  
                  self.Chain[i].Bond = [i,i+1]
                  
-             elif (i == len(self.Chain)):
+             elif (i == len(self.Chain)-1):
                  
                  self.Chain[i].Bond = [i-1,i]
             
@@ -164,22 +164,23 @@ class Polymer:
                  
                  self.Chain[i].Bend = [i,i]
                  
-             elif (i == len(self.Chain))-1:
+             elif (i == len(self.Chain)-2):
                  
                  self.Chain[i].Bend = [i,i]
             
              else:
-                 self.Chain[i].Tors = [i-1,i+1]
+                 self.Chain[i].Bend = [i-1,i+1]
                  
-         for i in range (0,len(self.Chain)-3):
+         for i in range (0,len(self.Chain)):
              
              if (i < len(self.Chain)-3):
                  
                  self.Chain[i].Tors = [i+1,i+2,i+3]
                  
              else :
+                 
                 
-                self.Chain[i].Tors = [i-1,i-2,i-3]
+                 self.Chain[i].Tors = [i-1,i-2,i-3]
                 
                  
              
