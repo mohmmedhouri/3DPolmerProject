@@ -180,6 +180,105 @@ class MonteCarlo :
     
     def Run(self):
         
+        if (consts.T_Mode == "V"):
+            print("TEST1")
+            
+            for TT in range (0,len(consts.TempVector)-1):
+                
+                 
+                 consts.Temp = consts.TempVector[TT] # start temperature
+
+                 consts.TempE = consts.TempVector[TT+1] #end temperature
+                 
+                 
+                 self.temperature =  consts.Temp
+
+                 
+                 TS = consts.TempInterval[TT]  ## steps in ns
+
+                 consts.CR = (consts.TempE)/TS
+                 self.totconf = TS
+                 self.conf = 0
+
+                
+                    
+                
+                
+                 self.melt.UpdateNeighbors(3)#add the RC
+                 ####calculate the energy
+                 self.PrintSimulation("Data")
+                 for i in range (0,len(self.melt.PMMA)):
+                     for j in range (0,len(self.melt.PMMA[i].Chain)):
+                         self.melt.PMMA[i].Chain[j].E = self.melt.CalEnrMonv(i,j,[0,0,0])
+               
+                 NPU = 0 # the Interval at which the neighbors to be updated
+                 
+                 Pri = 0 # print interval
+                 
+                 while self.conf < self.totconf:
+                     for i in range (0,len(self.melt.PMMA)):
+                         for j in range (0,len(self.melt.PMMA[i].Chain)):
+                             
+                              PI = random.randint(0,len(self.melt.PMMA)-1)
+                             
+                              MI = random.randint(0,len(self.melt.PMMA[PI].Chain)-1)
+                             
+                              DP = []
+                              for K in range (0,3):
+                                  
+                                 DP.append(numpy.random.normal(0.0, self.dispmag))
+                                 
+                              NewE= self.melt.CalEnrMonv(PI,MI,DP)
+                              
+                              if ( NewE == -1):
+                                  self.n_reject += 1
+                                  continue
+                      
+                              OldE = self.melt.PMMA[PI].Chain[MI].E
+    
+                              delta_E = NewE - OldE
+                              
+                              bf = math.exp(min(1.0, -delta_E / (consts.KB * self.temperature )))
+                              
+                              if bf >= numpy.random.random():
+                                  
+                                  self.n_accept += 1
+                                  self.melt.PMMA[PI].Chain[MI].E = NewE
+                                  self.melt.PMMA[PI].Chain[MI].X += DP[0]
+                                  self.melt.PMMA[PI].Chain[MI].Y += DP[1]
+                                  self.melt.PMMA[PI].Chain[MI].Z += DP[2]
+                                  self.melt.PMMA[PI].Chain[MI].Coordinate = [self.melt.PMMA[PI].Chain[MI].X,self.melt.PMMA[PI].Chain[MI].Y,self.melt.PMMA[PI].Chain[MI].Z]
+                                  
+                              else:
+                                  
+                                  self.n_reject += 1
+                                 
+                     print("Time ",self.totconf-self.conf, "Temperature ", self.temperature)         
+                     self._ChangeDisp()
+                     self._TempControl(consts.CR)                 
+                     self.conf += 1
+                     
+                     if (NPU < consts.NeighborUp):
+                         NPU +=1
+                     else:
+                         self.melt.UpdateNeighbors(3)
+                         NPU=0
+                                  
+                     if (Pri < consts.PrintingT):
+                         Pri +=1
+                     else:
+                         print("Printing")
+                         self.PrintSimulation(str(self.conf)+"t"+str(self.temperature))
+                         Pri=0
+                         
+                 self.PrintSimulation("End.txt")        
+                
+            
+        elif (consts.T_Mode == "E"):
+            
+            
+            
+            
              self.melt.UpdateNeighbors(3)#add the RC
              ####calculate the energy
              self.PrintSimulation("Data")
@@ -206,7 +305,7 @@ class MonteCarlo :
                              
                           NewE= self.melt.CalEnrMonv(PI,MI,DP)
                           
-                          if (NewE >= math.pow(10,16)):
+                          if ( NewE == -1):
                               self.n_reject += 1
                               continue
                   
@@ -244,8 +343,80 @@ class MonteCarlo :
                      Pri +=1
                  else:
                      print("Printing")
-                     self.melt.PrintSimulation(str(self.conf))
+                     self.PrintSimulation(str(self.conf))
                      Pri=0                    
+            
+        else:
+        
+        
+        
+             self.melt.UpdateNeighbors(3)#add the RC
+             ####calculate the energy
+             self.PrintSimulation("Data")
+             for i in range (0,len(self.melt.PMMA)):
+                 for j in range (0,len(self.melt.PMMA[i].Chain)):
+                     self.melt.PMMA[i].Chain[j].E = self.melt.CalEnrMonv(i,j,[0,0,0])
+           
+             NPU = 0 # the Interval at which the neighbors to be updated
+             
+             Pri = 0 # print interval
+             
+             while self.conf < self.totconf:
+                 for i in range (0,len(self.melt.PMMA)):
+                     for j in range (0,len(self.melt.PMMA[i].Chain)):
+                         
+                          PI = random.randint(0,len(self.melt.PMMA)-1)
+                         
+                          MI = random.randint(0,len(self.melt.PMMA[PI].Chain)-1)
+                         
+                          DP = []
+                          for K in range (0,3):
+                              
+                             DP.append(numpy.random.normal(0.0, self.dispmag))
+                             
+                          NewE= self.melt.CalEnrMonv(PI,MI,DP)
+                          
+                          if ( NewE == -1):
+                              self.n_reject += 1
+                              continue
+                  
+                          OldE = self.melt.PMMA[PI].Chain[MI].E
+
+                          delta_E = NewE - OldE
+                          
+                          bf = math.exp(min(1.0, -delta_E / (consts.KB * self.temperature )))
+                          
+                          if bf >= numpy.random.random():
+                              
+                              self.n_accept += 1
+                              self.melt.PMMA[PI].Chain[MI].E = NewE
+                              self.melt.PMMA[PI].Chain[MI].X += DP[0]
+                              self.melt.PMMA[PI].Chain[MI].Y += DP[1]
+                              self.melt.PMMA[PI].Chain[MI].Z += DP[2]
+                              self.melt.PMMA[PI].Chain[MI].Coordinate = [self.melt.PMMA[PI].Chain[MI].X,self.melt.PMMA[PI].Chain[MI].Y,self.melt.PMMA[PI].Chain[MI].Z]
+                              
+                          else:
+                              
+                              self.n_reject += 1
+                             
+                 print("Time ",self.totconf-self.conf, "Temperature ", self.temperature)         
+                 self._ChangeDisp()
+                 self._TempControl(consts.CR)                 
+                 self.conf += 1
+                 
+                 if (NPU < consts.NeighborUp):
+                     NPU +=1
+                 else:
+                     self.melt.UpdateNeighbors(3)
+                     NPU=0
+                     
+                 if (Pri < consts.PrintingT):
+                     Pri +=1
+                 else:
+                     print("Printing")
+                     self.PrintSimulation(str(self.conf))
+                     Pri=0                    
+             self.PrintSimulation("End.txt")        
     
     
         
