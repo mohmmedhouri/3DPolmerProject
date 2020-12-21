@@ -26,9 +26,9 @@ BOND = True
 BEND = True
 Torsion = True
 
-eps_ij = 1
+eps_ij = 0.03
 
-ro_ij = 1
+ro_ij = 0.04
 
 ### Torsion
 v_n = 1
@@ -65,14 +65,19 @@ TempE = 200 #end temperature
 
 k_box = 500 
 
+T_Mode = "V"    #Char V is vector other values set the linear cooling rate ! note the equation mode is still under test
 
-TS = 300  ## steps in ns
+TempVector =[455,300,60]
+
+TempInterval =[6,4]
+
+TS = 20  ## steps in ns
 
 CR = (TempE)/TS
 
-NeighborUp = 1000 # Neighbors list update
+NeighborUp = 10 # Neighbors list update
 
-PrintingT = 1000 #
+PrintingT = 2 #
 
 KB = 0.001987204
 
