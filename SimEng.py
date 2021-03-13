@@ -19,7 +19,7 @@ import numpy
 from scipy import signal
 
 from Energycalc import *
-
+from Elements import SimSpace,Monomer,Polymer
 from Simulation import Polypool
 import constants as consts
 
@@ -39,6 +39,7 @@ Metropolis Monte-Carlo class derived from Simulation base class.
   Attributes:
     totconf (int): Total number of steps.
     conf (int): Current simulation step number.
+    space simulation space/volume
     dispmag (float): Magnitude of average random displacement [Angstrom].
     dispinc (float): Rate constant for 'dispmag' adjustment.
     n_accept (int): Number of accepted MMC trials.
@@ -63,15 +64,19 @@ class MonteCarlo :
         self.dispinc = math.log(2.0)
         self.n_accept = 0
         self.n_reject = 0
+        self.Length = 0
+        self.Space = [[[SimSpace("F") for i in range(100)] for j in range(100)]for k in range (100)]
         self.dispconf = 100
         self.energyconf = 100
         self.geomconf = 100
-        self.melt=Polypool("def.txt")
+        self.melt=Polypool(" ")
         
 
     def setMC(self, infile_name, T,L):
         self.temperature = T
-        self.Length = L
+        self.Length = L[0]
+        print(self.Length)
+        self.Space = [[[SimSpace("F") for i in range(int(self.Length))] for j in range(int(self.Length))]for k in range (int(self.Length))]
         self.totconf = consts.TS
         self.conf = 0
         self.dispmag = 0.1
@@ -87,6 +92,15 @@ class MonteCarlo :
         if (not os.path.exists(infile_name)):
              print("No DataFile was found or the file is unreadable Simulation will be stopped")
              sys.exit()
+        
+        for i in range (0,len(self.melt.PMMA)):
+            for j in range (0,len(self.melt.PMMA[i].Chain)):
+                print(self.melt.PMMA[i].Chain[j].X)
+                self.Space[int(self.melt.PMMA[i].Chain[j].X)][int(self.melt.PMMA[i].Chain[j].Y)][int(self.melt.PMMA[i].Chain[j].Z)].SetSt("O")
+                       
+        
+        
+        
     def _GetRandDisp(self):
         """Generate random displacment vector for coordinates.
         
@@ -95,11 +109,11 @@ class MonteCarlo :
     
         self.rand_disp.fill(0.0)
         for i in range(self.mol.n_atoms):
-          for j in range(const.NUMDIM):
+          for j in range(consts.NUMDIM):
             randval = numpy.random.normal(0.0, self.dispmag)
             self.rand_disp[i][j] = numpy.random.normal(0.0, self.dispmag)
     
-
+    
     def _TempControl(self, Beta):
          """Update the system temperature based on the cooling rate.
     
@@ -203,10 +217,13 @@ class MonteCarlo :
                 
                     
                 
-                
-                 self.melt.UpdateNeighbors(3)#add the RC
+                 if (consts.W_mode == "O"):
+                     
+                     self.melt.UpdateNeighbors(3)#add the RC
+                     
                  ####calculate the energy
                  self.PrintSimulation("Data")
+                 
                  for i in range (0,len(self.melt.PMMA)):
                      for j in range (0,len(self.melt.PMMA[i].Chain)):
                          self.melt.PMMA[i].Chain[j].E = self.melt.CalEnrMonv(i,j,[0,0,0])
@@ -222,36 +239,227 @@ class MonteCarlo :
                               PI = random.randint(0,len(self.melt.PMMA)-1)
                              
                               MI = random.randint(0,len(self.melt.PMMA[PI].Chain)-1)
-                             
+                              
+                              
+                              XN=int(self.melt.PMMA[PI].Chain[MI].X)
+                              YN=int(self.melt.PMMA[PI].Chain[MI].Y)
+                              ZN=int(self.melt.PMMA[PI].Chain[MI].Z)
+                              #print("Selected :  ",XN,YN,ZN)
+                              
                               DP = []
                               for K in range (0,3):
-                                  
-                                 DP.append(numpy.random.normal(0.0, self.dispmag))
                                  
-                              NewE= self.melt.CalEnrMonv(PI,MI,DP)
+                                 if (consts.W_mode == "O"):
+                                     
+                                     
+                                     DP.append(numpy.random.normal(0.0, self.dispmag))
+                                 else :
+                                     
+                                     DP.append(random.choice([-1,0,1]))
                               
-                              if ( NewE == -1):
-                                  self.n_reject += 1
-                                  continue
-                      
-                              OldE = self.melt.PMMA[PI].Chain[MI].E
-    
-                              delta_E = NewE - OldE
                               
-                              bf = math.exp(min(1.0, -delta_E / (consts.KB * self.temperature )))
                               
-                              if bf >= numpy.random.random():
+                              
+                              if (consts.W_mode == "O"):
+                                  NewE= self.melt.CalEnrMonv(PI,MI,DP)
                                   
-                                  self.n_accept += 1
-                                  self.melt.PMMA[PI].Chain[MI].E = NewE
-                                  self.melt.PMMA[PI].Chain[MI].X += DP[0]
-                                  self.melt.PMMA[PI].Chain[MI].Y += DP[1]
-                                  self.melt.PMMA[PI].Chain[MI].Z += DP[2]
-                                  self.melt.PMMA[PI].Chain[MI].Coordinate = [self.melt.PMMA[PI].Chain[MI].X,self.melt.PMMA[PI].Chain[MI].Y,self.melt.PMMA[PI].Chain[MI].Z]
+                              
+                                  if ( NewE == -1):
+                                      self.n_reject += 1
+                                      continue
+                          
+                                  OldE = self.melt.PMMA[PI].Chain[MI].E
+        
+                                  delta_E = NewE - OldE
                                   
+                                  bf = math.exp(min(1.0, -delta_E / (consts.KB * self.temperature )))
+                                  
+                                  if bf >= numpy.random.random():
+                                      
+                                      self.n_accept += 1
+                                      self.melt.PMMA[PI].Chain[MI].E = NewE
+                                      self.melt.PMMA[PI].Chain[MI].X += DP[0]
+                                      self.melt.PMMA[PI].Chain[MI].Y += DP[1]
+                                      self.melt.PMMA[PI].Chain[MI].Z += DP[2]
+                                      self.melt.PMMA[PI].Chain[MI].Coordinate = [self.melt.PMMA[PI].Chain[MI].X,self.melt.PMMA[PI].Chain[MI].Y,self.melt.PMMA[PI].Chain[MI].Z]
+                                      
+                                  else:
+                                      
+                                      self.n_reject += 1
+                                      
                               else:
                                   
-                                  self.n_reject += 1
+                                  
+                                  IndX = int (self.melt.PMMA[PI].Chain[MI].X + DP[0])
+                                  IndY = int (self.melt.PMMA[PI].Chain[MI].Y + DP[1])
+                                  IndZ = int (self.melt.PMMA[PI].Chain[MI].Z + DP[2])
+                                  #print("After",IndX,IndY,IndZ)
+                                  
+                                  if (IndX > self.Length-1 or IndX < 0 or IndZ > self.Length-1 or IndZ < 0 or IndY > self.Length-1 or IndY < 0):
+                                      
+                                      break
+                                  
+                                      
+                                  
+                                  # if (IndY > self.Length-1 or IndY < 0):
+                                      
+                                  #     continue
+                                  
+                                  # if (IndZ > self.Length-1 or IndZ < 0):
+                                      
+                                  #     continue
+                                      
+                                  # print(IndX)
+                                  # print(IndY)
+                                  # print(IndZ)
+                                  else:
+                                      
+                                      NewE= self.melt.CalEnrMonv(PI,MI,DP)
+                                      #print("As above so below: ",IndX,IndY,IndZ)
+                                      
+                                      if ( NewE == -1 or self.Space[IndX][IndY][IndZ].St =="O"):
+                                          print(self.Space[IndX][IndY][IndZ].St)
+                                          
+                                          self.n_reject += 1
+                                          #print(MI,IndX,IndY,IndZ)
+                                         
+                              
+                                      OldE = self.melt.PMMA[PI].Chain[MI].E
+            
+                                      delta_E = NewE - OldE
+                                      
+                                      bf = math.exp(min(1.0, -delta_E / (consts.KB * self.temperature )))
+                                      
+                                      if bf >= numpy.random.random():
+                                          self.n_accept += 1
+                                          
+                                          
+                                          if (MI == len(self.melt.PMMA[PI].Chain)-1):
+                                              
+                                              
+                                              TEMPMONO = Monomer(0,0,0,0)
+                                              TEMPMONO = self.melt.PMMA[PI].Chain[MI]
+                                              #TEMPMONO.ID = self.melt.PMMA[PI].Chain[I-1].ID
+                                              
+                                              self.Space[IndX][IndY][IndZ].St = "O"
+                                              #print(self.Space[IndX][IndY][IndZ].St)
+                                              #XN=int(self.melt.PMMA[PI].Chain[MI].X)
+                                              #YN=int(self.melt.PMMA[PI].Chain[MI].Y)
+                                              #ZN=int(self.melt.PMMA[PI].Chain[MI].Z)
+                                              #print(MI,XN,YN,ZN)
+                                              
+                                              self.melt.PMMA[PI].Chain[MI].E = NewE
+                                              self.melt.PMMA[PI].Chain[MI].X += DP[0]
+                                              self.melt.PMMA[PI].Chain[MI].Y += DP[1]
+                                              self.melt.PMMA[PI].Chain[MI].Z += DP[2]
+                                              self.melt.PMMA[PI].Chain[MI].Coordinate = [self.melt.PMMA[PI].Chain[MI].X,self.melt.PMMA[PI].Chain[MI].Y,self.melt.PMMA[PI].Chain[MI].Z]
+                                              
+                                              
+                                              
+                                              
+                                              for I in range (len(self.melt.PMMA[PI].Chain)-2,-1,-1):
+                                                  
+                                                  TempID = TEMPMONO.ID
+                                                  
+                                                  TEMPMONO, self.melt.PMMA[PI].Chain[I] = self.melt.PMMA[PI].Chain[I],TEMPMONO
+                                                  
+                                                  self.melt.PMMA[PI].Chain[I].ID = TempID
+                                                  
+                                                  if (I==0):
+                                                      
+                                                      self.Space[int(TEMPMONO.X)][int(TEMPMONO.Y)][int(TEMPMONO.Z)].St = "F"
+                                                      
+                                                  
+                                                  
+                                                  '''
+                                                  TempX = self.melt.PMMA[PI].Chain[I-1].E
+                                                  TempY = self.melt.PMMA[PI].Chain[I-1].X
+                                                  TempZ = self.melt.PMMA[PI].Chain[I-1].Y
+                                                  TempE = self.melt.PMMA[PI].Chain[I-1].Z
+                                                  
+                                                  
+                                                  self.melt.PMMA[PI].Chain[I-1].E =  self.melt.PMMA[PI].Chain[I-1].E
+                                                  self.melt.PMMA[PI].Chain[I-1].X =  self.melt.PMMA[PI].Chain[I-1].X
+                                                  self.melt.PMMA[PI].Chain[I-1].Y =  self.melt.PMMA[PI].Chain[I-1].Y
+                                                  self.melt.PMMA[PI].Chain[I].Coordinate = [self.melt.PMMA[PI].Chain[I].X,self.melt.PMMA[PI].Chain[I].Y,self.melt.PMMA[I].Chain[I].Z]
+                                                  '''
+                                            
+                                                  
+                    
+                                              
+                                          elif(MI == 0):
+                                              TEMPMONO = Monomer(0,0,0,0)
+                                              TEMPMONO = self.melt.PMMA[PI].Chain[MI]
+                                              #TEMPMONO.ID = self.melt.PMMA[PI].Chain[I-1].ID
+                                              
+                                              self.Space[IndX][IndY][IndZ].St = "O"
+                                              #print(self.Space[IndX][IndY][IndZ].St)
+                                              #XN=int(self.melt.PMMA[PI].Chain[MI].X)
+                                              #YN=int(self.melt.PMMA[PI].Chain[MI].Y)
+                                              #ZN=int(self.melt.PMMA[PI].Chain[MI].Z)
+                                              #print(MI,XN,YN,ZN)
+                                              
+                                              self.melt.PMMA[PI].Chain[MI].E = NewE
+                                              self.melt.PMMA[PI].Chain[MI].X += DP[0]
+                                              self.melt.PMMA[PI].Chain[MI].Y += DP[1]
+                                              self.melt.PMMA[PI].Chain[MI].Z += DP[2]
+                                              self.melt.PMMA[PI].Chain[MI].Coordinate = [self.melt.PMMA[PI].Chain[MI].X,self.melt.PMMA[PI].Chain[MI].Y,self.melt.PMMA[PI].Chain[MI].Z]
+                                            
+                                          
+                                          
+        
+                                              for I in range (1,len(self.melt.PMMA[PI].Chain)):
+                                                  
+                                                  
+                                                  
+                                                  
+                                                  TempID = TEMPMONO.ID
+                                                  
+                                                  TEMPMONO, self.melt.PMMA[PI].Chain[I] = self.melt.PMMA[PI].Chain[I],TEMPMONO
+                                                  
+                                                  self.melt.PMMA[PI].Chain[I].ID = TempID
+                                                  
+                                                  if (I==len(self.melt.PMMA[PI].Chain)-1):
+                                                      
+                                                      self.Space[int(TEMPMONO.X)][int(TEMPMONO.Y)][int(TEMPMONO.Z)].St = "F"
+                                                  
+                                                  
+                                                  
+                                                  '''
+                                                  self.melt.PMMA[PI].Chain[I-1].E =  self.melt.PMMA[PI].Chain[I].E
+                                                  self.melt.PMMA[PI].Chain[I-1].X =  self.melt.PMMA[PI].Chain[I].X
+                                                  self.melt.PMMA[PI].Chain[I-1].Y =  self.melt.PMMA[PI].Chain[I].Y
+                                                  self.melt.PMMA[PI].Chain[I-1].Z =  self.melt.PMMA[PI].Chain[I].Z
+                                                  self.melt.PMMA[PI].Chain[I-1].Coordinate = [self.melt.PMMA[PI].Chain[I].X,self.melt.PMMA[PI].Chain[I].Y,self.melt.PMMA[I].Chain[I].Z]
+                                          
+                                                  '''
+                                          
+                                          
+                                          else:
+                                              if (IndX > self.Length-1 or IndX < 0 or IndZ > self.Length-1 or IndZ < 0 or IndY > self.Length-1 or IndY < 0):
+                                                  print("Here we stand")
+                                              
+                                              else:   # bond fluct 
+                                                  self.Space[IndX][IndY][IndZ].St = "O"
+                                                  #print(self.Space[IndX][IndY][IndZ].St)
+                                                  #XN=int(self.melt.PMMA[PI].Chain[MI].X)
+                                                  #YN=int(self.melt.PMMA[PI].Chain[MI].Y)
+                                                  #ZN=int(self.melt.PMMA[PI].Chain[MI].Z)
+                                                  #print(MI,XN,YN,ZN)
+                                                  self.Space[XN][YN][ZN].St = "F"
+                                                  self.melt.PMMA[PI].Chain[MI].E = NewE
+                                                  self.melt.PMMA[PI].Chain[MI].X += DP[0]
+                                                  self.melt.PMMA[PI].Chain[MI].Y += DP[1]
+                                                  self.melt.PMMA[PI].Chain[MI].Z += DP[2]
+                                                  self.melt.PMMA[PI].Chain[MI].Coordinate = [self.melt.PMMA[PI].Chain[MI].X,self.melt.PMMA[PI].Chain[MI].Y,self.melt.PMMA[PI].Chain[MI].Z]   
+                                          
+                                      else:
+                                          
+                                          self.n_reject += 1
+                                  
+                                  
+                                  
+                                  
                                  
                      print("Time ",self.totconf-self.conf, "Temperature ", self.temperature)         
                      self._ChangeDisp()
@@ -261,7 +469,11 @@ class MonteCarlo :
                      if (NPU < consts.NeighborUp):
                          NPU +=1
                      else:
-                         self.melt.UpdateNeighbors(3)
+                         
+                         if (consts.W_mode == "O"):
+                             
+                             self.melt.UpdateNeighbors(3)
+                         
                          NPU=0
                                   
                      if (Pri < consts.PrintingT):
@@ -277,9 +489,11 @@ class MonteCarlo :
         elif (consts.T_Mode == "E"):
             
             
+             if (consts.W_mode == "O"):
+                     
+                self.melt.UpdateNeighbors(3)#add the RC
             
-            
-             self.melt.UpdateNeighbors(3)#add the RC
+             
              ####calculate the energy
              self.PrintSimulation("Data")
              for i in range (0,len(self.melt.PMMA)):
@@ -293,58 +507,154 @@ class MonteCarlo :
              while self.conf < self.totconf:
                  for i in range (0,len(self.melt.PMMA)):
                      for j in range (0,len(self.melt.PMMA[i].Chain)):
-                         
-                          PI = random.randint(0,len(self.melt.PMMA)-1)
-                         
-                          MI = random.randint(0,len(self.melt.PMMA[PI].Chain)-1)
-                         
-                          DP = []
-                          for K in range (0,3):
-                              
-                             DP.append(numpy.random.normal(0.0, self.dispmag))
                              
-                          NewE= self.melt.CalEnrMonv(PI,MI,DP)
-                          
-                          if ( NewE == -1):
-                              self.n_reject += 1
-                              continue
-                  
-                          OldE = self.melt.PMMA[PI].Chain[MI].E
-
-                          delta_E = NewE - OldE
-                          
-                          bf = math.exp(min(1.0, -delta_E / (consts.KB * self.temperature )))
-                          
-                          if bf >= numpy.random.random():
-                              
-                              self.n_accept += 1
-                              self.melt.PMMA[PI].Chain[MI].E = NewE
-                              self.melt.PMMA[PI].Chain[MI].X += DP[0]
-                              self.melt.PMMA[PI].Chain[MI].Y += DP[1]
-                              self.melt.PMMA[PI].Chain[MI].Z += DP[2]
-                              self.melt.PMMA[PI].Chain[MI].Coordinate = [self.melt.PMMA[PI].Chain[MI].X,self.melt.PMMA[PI].Chain[MI].Y,self.melt.PMMA[PI].Chain[MI].Z]
-                              
-                          else:
-                              
-                              self.n_reject += 1
+                              PI = random.randint(0,len(self.melt.PMMA)-1)
                              
-                 print("Time ",self.totconf-self.conf, "Temperature ", self.temperature)         
-                 self._ChangeDisp()
-                 self._TempControl(consts.CR)                 
-                 self.conf += 1
-                 
-                 if (NPU < consts.NeighborUp):
-                     NPU +=1
-                 else:
-                     self.melt.UpdateNeighbors(3)
-                     NPU=0
+                              MI = random.randint(0,len(self.melt.PMMA[PI].Chain)-1)
+                             
+                              DP = []
+                              for K in range (0,3):
+                                 
+                                 if (consts.W_mode == "O"):
+                                     
+                                     
+                                     DP.append(numpy.random.normal(0.0, self.dispmag))
+                                 else :
+                                     
+                                     DP.append(random.choice([-1,0,1]))
+                              
+                              NewE= self.melt.CalEnrMonv(PI,MI,DP)
+                              
+                              
+                              if (consts.W_mode == "O"):
+                                  
+                              
+                                  if ( NewE == -1):
+                                      self.n_reject += 1
+                                      continue
+                          
+                                  OldE = self.melt.PMMA[PI].Chain[MI].E
+        
+                                  delta_E = NewE - OldE
+                                  
+                                  bf = math.exp(min(1.0, -delta_E / (consts.KB * self.temperature )))
+                                  
+                                  if bf >= numpy.random.random():
+                                      
+                                      self.n_accept += 1
+                                      self.melt.PMMA[PI].Chain[MI].E = NewE
+                                      self.melt.PMMA[PI].Chain[MI].X += DP[0]
+                                      self.melt.PMMA[PI].Chain[MI].Y += DP[1]
+                                      self.melt.PMMA[PI].Chain[MI].Z += DP[2]
+                                      self.melt.PMMA[PI].Chain[MI].Coordinate = [self.melt.PMMA[PI].Chain[MI].X,self.melt.PMMA[PI].Chain[MI].Y,self.melt.PMMA[PI].Chain[MI].Z]
+                                      
+                                  else:
+                                      
+                                      self.n_reject += 1
+                                      
+                              else:
+                                  
+                                  IndX = int (self.melt.PMMA[PI].Chain[MI].X + DP[0])
+                                  IndY = int (self.melt.PMMA[PI].Chain[MI].Y + DP[1])
+                                  IndZ = int (self.melt.PMMA[PI].Chain[MI].Z + DP[2])
+                                  
+                                  if (IndX > self.Length or IndX < 0):
+                                      continue
+                                  
+                                  if (IndY > self.Length or IndY < 0):
+                                      continue
+                                  
+                                  if (IndZ > self.Length or IndZ < 0):
+                                      continue
+                                      
+                                  
+                                  if ( NewE == -1 or self.Space[IndX][IndY][IndZ] =="O"):
+                                      self.n_reject += 1
+                                      continue
+                          
+                                  OldE = self.melt.PMMA[PI].Chain[MI].E
+        
+                                  delta_E = NewE - OldE
+                                  
+                                  bf = math.exp(min(1.0, -delta_E / (consts.KB * self.temperature )))
+                                  
+                                  if bf >= numpy.random.random():
+                                      self.n_accept += 1
+                                      
+                                      
+                                      if (MI == len(self.melt.PMMA[PI].Chain)-1):
+                                          
+                                          
+                                          
+                                          
+                                          
+                                          for I in range (len(self.melt.PMMA[PI].Chain)-1,-1,-1):
+                                          
+                                              
+                                              self.melt.PMMA[PI].Chain[I+1].E =  self.melt.PMMA[PI].Chain[I].E
+                                              self.melt.PMMA[PI].Chain[I+1].X =  self.melt.PMMA[PI].Chain[I].X
+                                              self.melt.PMMA[PI].Chain[I+1].Y =  self.melt.PMMA[PI].Chain[I].Y
+                                              self.melt.PMMA[PI].Chain[I+1].Z =  self.melt.PMMA[PI].Chain[I].Z
+                                              self.melt.PMMA[PI].Chain[I+1].Coordinate = [self.melt.PMMA[PI].Chain[I].X,self.melt.PMMA[PI].Chain[I].Y,self.melt.PMMA[I].Chain[I].Z]
+                                              
+                
+                                          
+                                      elif(MI == 0):
+    
+                                          for I in range (1,len(self.melt.PMMA[PI].Chain)):
+                                          
+                                              
+                                              self.melt.PMMA[PI].Chain[I-1].E =  self.melt.PMMA[PI].Chain[I].E
+                                              self.melt.PMMA[PI].Chain[I-1].X =  self.melt.PMMA[PI].Chain[I].X
+                                              self.melt.PMMA[PI].Chain[I-1].Y =  self.melt.PMMA[PI].Chain[I].Y
+                                              self.melt.PMMA[PI].Chain[I-1].Z =  self.melt.PMMA[PI].Chain[I].Z
+                                              self.melt.PMMA[PI].Chain[I-1].Coordinate = [self.melt.PMMA[PI].Chain[I].X,self.melt.PMMA[PI].Chain[I].Y,self.melt.PMMA[I].Chain[I].Z]
+                                        
+                                      
+                                          
+                                      self.Space[IndX][IndY][IndZ].St = "O"
+                                      XN=int(self.melt.PMMA[PI].Chain[MI].X)
+                                      YN=int(self.melt.PMMA[PI].Chain[MI].Y)
+                                      ZN=int(self.melt.PMMA[PI].Chain[MI].Z)
+                                      self.Space[XN][YN][ZN ].St = "F"
+                                      self.melt.PMMA[PI].Chain[MI].E = NewE
+                                      self.melt.PMMA[PI].Chain[MI].X += DP[0]
+                                      self.melt.PMMA[PI].Chain[MI].Y += DP[1]
+                                      self.melt.PMMA[PI].Chain[MI].Z += DP[2]
+                                      self.melt.PMMA[PI].Chain[MI].Coordinate = [self.melt.PMMA[PI].Chain[MI].X,self.melt.PMMA[PI].Chain[MI].Y,self.melt.PMMA[PI].Chain[MI].Z]   
+                                      
+                                  else:
+                                      
+                                      self.n_reject += 1
+                                  
+                                  
+                                  
+                                  
+                                 
+                     print("Time ",self.totconf-self.conf, "Temperature ", self.temperature)         
+                     self._ChangeDisp()
+                     self._TempControl(consts.CR)                 
+                     self.conf += 1
                      
-                 if (Pri < consts.PrintingT):
-                     Pri +=1
-                 else:
-                     print("Printing")
-                     self.PrintSimulation(str(self.conf))
-                     Pri=0                    
+                     if (NPU < consts.NeighborUp):
+                         NPU +=1
+                     else:
+                         
+                         if (consts.W_mode == "O"):
+                             
+                             self.melt.UpdateNeighbors(3)
+                         
+                         NPU=0
+                                  
+                     if (Pri < consts.PrintingT):
+                         Pri +=1
+                     else:
+                         print("Printing")
+                         self.PrintSimulation(str(self.conf)+"t"+str(self.temperature))
+                         Pri=0
+                         
+                 self.PrintSimulation("End.txt")        
+ 
             
         else:
         

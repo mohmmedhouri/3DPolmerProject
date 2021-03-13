@@ -17,7 +17,7 @@ CR = 100000
 
 Configuration = SimEng.MonteCarlo()
 
-Configuration.setMC("result.txt", consts.Temp, consts.SimDimention)
+Configuration.setMC("PMMA_nc200_cl200_D200.dat", consts.Temp, consts.SimDimention)
 
 
 Configuration.Run()

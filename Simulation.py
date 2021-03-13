@@ -41,10 +41,12 @@ class Polypool :
             f1=f.readlines()
 
             for i in range (9,len(f1)):
-                
+                #print(f1[i])
                 Data=f1[i].split(" ")
-                #print(Data[3])
+                #print(Data)
+                #print(Data[2])
                 MonomerTemp = Monomer(float(Data[3]),float(Data[4]),float(Data[5]),float(Data[0]))
+                #print(int (Data[1]))
                 self.PMMA[int (Data[1])-1].Chain.append(MonomerTemp)
                 
                
@@ -53,7 +55,7 @@ class Polypool :
             f.close()
             for i in range (0, len(PMMA)):
                 self.PMMA[i].Chain.pop(0)
-                print()
+                #print()
                 self.PMMA[i].LinkBinding()
             
             
@@ -117,12 +119,15 @@ class Polypool :
             
             Eto=Energycalc.GetETorsion(t_ijkl, const.v_n,const.gamma, const.nfold, const.paths)
             
-        PointA =np.add( self.PMMA[PI].Chain[MI].Coordinate,dP)    
-        for i in (self.PMMA[PI].Chain[MI].Neighbor):
-
-            PointB =  self.PMMA[i[0]].Chain[i[1]].Coordinate #  check neighbors format 
-            r_ij =geomcalc. GetRij(PointB,PointA)
-            Enb+=Energycalc.GetE_LJ(r_ij, const.eps_ij,const.ro_ij)
+        PointA =np.add( self.PMMA[PI].Chain[MI].Coordinate,dP)
+        
+        if (const.W_mode == "O"):
+            
+            for i in (self.PMMA[PI].Chain[MI].Neighbor):
+    
+                PointB =  self.PMMA[i[0]].Chain[i[1]].Coordinate #  check neighbors format 
+                r_ij =geomcalc. GetRij(PointB,PointA)
+                Enb+=Energycalc.GetE_LJ(r_ij, const.eps_ij,const.ro_ij)
             
         Ewa=Energycalc.WallEnergy(const.SimDimention,'cube',self.PMMA[PI].Chain[MI].Coordinate,const.Pres,const.Temp,const.k_box)    
             

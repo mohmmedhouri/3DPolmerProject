@@ -183,7 +183,17 @@ class Polymer:
                  self.Chain[i].Tors = [i-1,i-2,i-3]
                 
                  
-             
+class SimSpace :
+    
+    def __init__(self,St):
+        
+        self.St ="F"
+        
+    def SetSt (self,Status):
+        
+        self.St = Status
+
+                
             
 #PMMA=Polymer(200)    
 #print(PMMA.Chain[0].Bond)       

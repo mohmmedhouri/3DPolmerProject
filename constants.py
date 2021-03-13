@@ -17,9 +17,11 @@ import math
 ### 
 
 N = 200 # Chain length
-n = 20 # Number of polymer chains 
+n = 200 # Number of polymer chains 
 
 ##All the constants in the simulation program
+
+W_mode = "F"  # off lattice mode L for lattice mode 
 
 ### LJ potential
 BOND = True
@@ -51,7 +53,7 @@ k_b = 1
 
 ## Simulation L
 
-SimDimention = [30,30,30]
+SimDimention = [50,50,50]
 
 NUMDIM = 3
 

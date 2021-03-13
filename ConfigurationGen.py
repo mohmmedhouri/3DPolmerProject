@@ -93,7 +93,7 @@ ANGLE= True
 Dehid = True
 
 
-TotalNumberOfPolymer=20
+TotalNumberOfPolymer=200
 PolymerLength = 200
 MolarMass= 1 
 SimSize= 50
